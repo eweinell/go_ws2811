@@ -39,9 +39,9 @@ package ws2811
 */
 import "C"
 import (
-	"errors"
-	"fmt"
-	"unsafe"
+    "errors"
+    "fmt"
+    "unsafe"
 )
 
 var (
@@ -65,59 +65,62 @@ var (
 )
 
 func Init(gpioPin int, ledCount int, brightness int) error {
-	C.ledstring.channel[0].gpionum = C.int(gpioPin)
-	C.ledstring.channel[0].count = C.int(ledCount)
-	C.ledstring.channel[0].brightness = C.uint8_t(brightness)
-	res := int(C.ws2811_init(&C.ledstring))
-	if res == 0 {
-		return nil
-	} else {
-		return errors.New(fmt.Sprintf("Error ws2811.init.%d", res))
-	}
+    C.ledstring.channel[0].gpionum = C.int(gpioPin)
+    C.ledstring.channel[0].count = C.int(ledCount)
+    C.ledstring.channel[0].brightness = C.uint8_t(brightness)
+    C.ledstring.channel[0].strip_type = C.SK6812_STRIP_RGBW
+    res := int(C.ws2811_init(&C.ledstring))
+    if res == 0 {
+        return nil
+    } else {
+        return errors.New(fmt.Sprintf("Error ws2811.init.%d", res))
+    }
 }
 
 func Fini() {
-	C.ws2811_fini(&C.ledstring)
+    C.ws2811_fini(&C.ledstring)
 }
 
 func Render() error {
-	res := int(C.ws2811_render(&C.ledstring))
-	if res == 0 {
-		return nil
-	} else {
-		return errors.New(fmt.Sprintf("Error ws2811.render.%d", res))
-	}
+    res := int(C.ws2811_render(&C.ledstring))
+    if res == 0 {
+        return nil
+    } else {
+        return errors.New(fmt.Sprintf("Error ws2811.render.%d", res))
+    }
 }
 
 func Wait() error {
-	res := int(C.ws2811_wait(&C.ledstring))
-	if res == 0 {
-		return nil
-	} else {
-		return errors.New(fmt.Sprintf("Error ws2811.wait.%d", res))
-	}
+    res := int(C.ws2811_wait(&C.ledstring))
+    if res == 0 {
+        return nil
+    } else {
+        return errors.New(fmt.Sprintf("Error ws2811.wait.%d", res))
+    }
 }
 
 func SetLed(index int, value uint32, correctGamma bool) {
     fixedColor := recalculateColor(value, correctGamma)
-	C.ws2811_set_led(&C.ledstring, C.int(index), C.uint32_t(fixedColor))
+    C.ws2811_set_led(&C.ledstring, C.int(index), C.uint32_t(fixedColor))
 }
 
 func Clear() {
-	C.ws2811_clear(&C.ledstring)
+    C.ws2811_clear(&C.ledstring)
 }
 
 func SetBitmap(a []uint32) {
-	C.ws2811_set_bitmap(&C.ledstring, unsafe.Pointer(&a[0]), C.int(len(a)*4))
+    C.ws2811_set_bitmap(&C.ledstring, unsafe.Pointer(&a[0]), C.int(len(a)*4))
 }
 
 func recalculateColor(value uint32, correctGamma bool) uint32 {
+    white := value >> 24 & 0xFF
     red := value >> 16 & 0xFF
     green := value >> 8 & 0xFF
     blue := value >> 0 & 0xFF
     
     // Gamma is off by default.
     if (correctGamma) {
+        white = gammaTable[int(white)]
         red = gammaTable[int(red)]
         green = gammaTable[int(green)]
         blue = gammaTable[int(blue)]
@@ -125,9 +128,10 @@ func recalculateColor(value uint32, correctGamma bool) uint32 {
 
     // Red and Green is mixed up, when Rendering on LED strip. Idk why.
     // This kind of works.
-    regenR := red << 8 & 0xFFFFFF
-    regenG := green << 16 & 0xFFFFFF
-    regenB := blue << 0 & 0xFFFFFF
+    regenW := white << 24 & 0xFFFFFFFF
+    regenR := red << 8 & 0xFFFFFFFF
+    regenG := green << 16 & 0xFFFFFFFF
+    regenB := blue << 0 & 0xFFFFFFFF
 
-    return regenR + regenG + regenB
+    return regenR + regenG + regenB + regenW
 }

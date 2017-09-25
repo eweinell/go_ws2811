@@ -2,7 +2,7 @@ package main
 
 import (
     "os"
-    "github.com/simonassank/go_ws2811"
+    "github.com/eweinell/go_ws2811"
     "strconv"
     _ "fmt"
 )
